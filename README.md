@@ -2,7 +2,7 @@
 
 The *prev-NAS* is a R project for modeling and forecasting groundwater level (GWL) time series with combined models.
 
-*Read this in other languages*: [Português brasileiro](README.br.md)
+*Read this in other languages*: [Português brasileiro](README.br.md).
 
 ## Installation
 

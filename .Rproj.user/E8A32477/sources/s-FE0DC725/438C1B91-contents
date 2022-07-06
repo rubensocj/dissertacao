@@ -2,7 +2,7 @@
 
 O *prev-NAS* é um projeto em R para modelagem e previsão de séries temporais de níveis de água subterrânea (NAS) usando modelos combinados.
 
-*Leia isto em outras linguagens*: [English](README.md)
+*Leia isto em outras linguagens*: [English](README.md).
 
 ## Instalação
 

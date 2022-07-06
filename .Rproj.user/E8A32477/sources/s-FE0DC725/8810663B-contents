@@ -1,0 +1,50 @@
+# copula empirica
+set.seed(4567)
+
+# dados originai
+# deixar emf função de n
+n <- 50
+x <- rnorm(n)
+y <- rnorm(n)
+
+# ranks
+rx <- rank(x)
+ry <- rank(y)
+cbind(rx,ry)
+
+# dados normalizados (padronizados)
+rxl <- rx/(n+1)
+ryl <- ry/(n+1)
+cbind(rxl,ryl)
+
+# Cn = copula empirica acumulada
+# distribuições de frequencias abs. e relativas
+# Cn é uma dist. freq. rel. acumulada
+# distribuições de frequencias absolutas e relativas...
+# acumuladas e não-acumuladas
+
+# relativos
+u <- sort(runif(n))
+v <- sort(runif(n))
+
+copulaEmpirica <- function(u,v) {
+  return(sum(rxl<=u & ryl<=v)/n)
+}
+
+z <- matrix(nrow = n, ncol = n)
+for (i in 1:n) {
+  for (j in 1:n) {
+    z[i,j] <- copulaEmpirica(u[i], v[j])
+  }
+}
+z
+
+par(mfrow = c(1,2), mar = c(4,2,4,1), xpd = TRUE, mgp = c(2,0.2,0), cex.axis = 0.6, tck = -0.02, cex.main = 0.8)
+persp(u,v,z,
+      theta = 30, phi = 20,
+      col = "lightskyblue", border = "gray50",
+      xlab = "u", ylab = "v", ticktype='detailed', cex.axis = 0.6)
+contour(u,v,z,
+        xlab = "", ylab = "", cex.axis = 0.6, tck = -0.02)
+mtext("u", side = 1, line = 1)
+mtext("y", side = 2, line = 1)
