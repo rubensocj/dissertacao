@@ -1,13 +1,17 @@
-# Study of groundwater level for PRODER ----
-# author: Rubens O. da Cunha Júnior
-rm(list = ls()); cat('\014');
-set.seed(1);
-options(digits = 4, scipen = -2)
-source(file = './r/gw_package.R'); source(file = './r/gw_metrics.R')
-source(file = './r/gw_my_models.R'); source(file = './r/gw_metrics.R')
+#' @author: Rubens O. da Cunha Júnior
+
+rm(list = ls())
+cat('\014')
+set.seed(1)
+
+source(file = './r/functions.R')
+source(file = './r/metrics.R')
+source(file = './r/models.R')
+
 load_packages(c('forecast','dplyr','imputeTS','tsfeatures','xtable','MASS',
                 'corrplot','elmNNRcpp','keras','tensorflow'))
-path.gwl <- './man/nivel/todos/';
+
+path.gwl <- './man/nivel/todos/'
 path.results <- './man/results/main/'
 
 # Input parameters ----
@@ -278,207 +282,6 @@ res.fct <- data.frame(t(apply(fct.MODELS.src, 2, function(f) {
 }))); colnames(res.fct) <- c('RMSE','MAE','MAPE','U de Theil','R$^2$','POCID')
 res.fct <- cbind('Modelo' = methods, res.fct)
 
-# csv
-write.csv(x = cbind('Serie'=rep(rename.gwl[well]),res.fct), file = paste0(
-  path.results, 'tables/metrics/res.fct.',rename.gwl[well],'.csv'),
-  row.names = FALSE, sep = ';', dec = '\\.')
-
-# Latex table
-res.fct <- apply(res.fct, 2, as.character)
-res.fct <- gsub("\\.",",", res.fct)
-ini.tes <- paste0('01-', sprintf("%02d",cycle(ts.gwl)[len.tra.val+1]),
-                  '-', round(time(ts.gwl)[len.tra.val+1],0))
-end.tes <- paste0('01-', sprintf("%02d",cycle(ts.gwl)[len.tra.val+len.tes]),
-                  '-', round(time(ts.gwl)[len.tra.val+len.tes],0))
-ini.tes <- format(as.Date(ini.tes, format = "%d-%m-%Y"), format = "%b/%Y")
-end.tes <- format(as.Date(end.tes, format = "%d-%m-%Y"), format = "%b/%Y")
-
-caption.res.fct <- paste0(
-  'Desempenho dos modelos de previsão para a série ', rename.gwl[well],' ',
-  'no conjunto de teste (',ini.tes,' -- ',end.tes,'): ',
-  'RMSE (em m), MAE (em m), MAPE (em \\%), Coeficiente U de Theil, ',
-  'Coeficiente de Determinação R$^2$ e POCID (em \\%)'
-)
-latex.res.fct <- xtable(
-  res.fct,
-  caption = caption.res.fct,
-  label = c(paste0("tab:forecast-results-", rename.gwl[well])),
-  align = rep('c', ncol(res.fct)+1)
-)
-latex.res.fct.file <- paste0(
-  path.results,
-  paste0('latex tables/table.res.fct.', rename.gwl[well],'.txt')
-)
-print.xtable(
-  file = latex.res.fct.file,
-  x = latex.res.fct,
-  caption.placement = "top",
-  include.rownames = FALSE,
-  sanitize.colnames.function = function(x){paste('{\\textbf{',x,'}}', sep ='')},
-  caption.width = c("13cm"),
-  sanitize.text.function = function(x){x},
-  booktabs = TRUE
-)
-
-# csv
-res.MODELS.src <- rbind(fit.MODELS.src, fct.MODELS.src)
-res.MODELS.src <- cbind(tail(ts.gwl, nrow(res.MODELS.src)),
-                        res.MODELS.src)
-colnames(res.MODELS.src) <- c('y', methods)
-write.csv(x = res.MODELS.src, file = paste0(
-  path.results, 'tables/forecasts/res.',rename.gwl[well],'.csv'),
-  row.names = FALSE, sep = ";", dec = "\\.")
-
-# Training duration ----
-res.time <- data.frame(
-  cbind(
-    rename.gwl[well],
-    mod.ARIMA$training.time,
-    mod.ETS$training.time,
-    mod.ANN$optimization.time,
-    mod.SVR$optimization.time,
-    mod.ELM$optimization.time,
-    mod.LSTM$training.time,
-    mod.cANN$optimization.time,
-    mod.cSVR$optimization.time,
-    mod.cMV$modellingTime,
-    mod.cCP$modellingTime)
-); colnames(res.time) <- c('Serie', methods[-c(7,8)])
-
-# csv
-write.csv(x = res.time, file = paste0(
-  path.results, 'tables/times/fit.time.',rename.gwl[well],'.csv'),
-  row.names = FALSE, sep = ";", dec = "\\.")
-
-# Model description ----
-# ARIMA
-desc.arima <- cbind('ARIMA', paste0(as.character(mod.ARIMA$model)))
-
-# ETS
-alpha <- if('alpha'%in%names(mod.ETS$model$par)) {
-  paste0('$\\alpha=', round(mod.ETS$model$par[names(mod.ETS$model$par)=='alpha'],3),'$ ')
-} else {''}; alpha
-beta <- if('beta'%in%names(mod.ETS$model$par)) {
-    paste0('$\\beta=', round(mod.ETS$model$par[names(mod.ETS$model$par)=='beta'],3),'$ ')
-} else {''}; beta
-gamma <- if('gamma'%in%names(mod.ETS$model$par)) {
-  paste0('$\\gamma=', round(mod.ETS$model$par[names(mod.ETS$model$par)=='gamma'],3),'$ ')
-} else (''); gamma
-desc.ets <- cbind(
-  'ETS',
-  paste0(as.character(mod.ETS$model),' ',paste(alpha,beta,gamma)))
-
-# ANN
-desc.mlp <- cbind(
-  'ANN', paste0('p=', mod.ANN$p,', P=', mod.ANN$P,
-                ', nN=', as.numeric(mod.ANN$hidden[1]),
-                ', nL=', as.numeric(length(mod.ANN$hidden)),
-                ', FA=\\texttt{', mod.ANN$model$actfun,'}'))
-
-# SVR
-desc.svr <- cbind(
-  'SVR',
-  paste0(
-    'p=', mod.SVR$p,
-    ', P=', mod.SVR$P,
-    ', $\\gamma$=', round(mod.SVR$gamma, 3),
-    ', C=', round(mod.SVR$cost, 3),
-    ', $\\varepsilon$=', round(mod.SVR$epsilon, 3),
-    ', nSV=', mod.SVR$model$model$tot.nSV))
-
-# ELM
-desc.elm <- cbind(
-  'ELM',
-  paste0(
-    'p=', mod.ELM$p,
-    ', P=', mod.ELM$P,
-    ', nN=', mod.ELM$hidden,
-    ', FA=\\texttt{', mod.ELM$actfun,'}'))
-
-# LSTM
-desc.lstm <- cbind(
-  'LSTM',
-  paste0(
-    'p=', sum(mod.LSTM$lags<12),
-    ', P=', sum(mod.LSTM$lags>=12),
-    ', nN=', as.numeric(mod.LSTM$hidden[1])))
-    # ', nE=', as.numeric(length(mod.LSTM$model$history$metrics$loss))))
-
-# SVR combination
-desc.csvr <- cbind(
-  'cSVR',
-  paste0(
-    '$\\gamma$=', round(mod.cSVR$gamma, 3),
-    ', C=', round(mod.cSVR$cost, 3),
-    ', $\\varepsilon$=', round(mod.cSVR$epsilon, 3),
-    ', nSV=', mod.cSVR$model$model$tot.nSV))
-
-# ANN combination
-desc.cmlp <- cbind(
-  'cANN', paste0('nN=', as.numeric(mod.cANN$hidden[1]),
-                ', nL=', as.numeric(length(mod.cANN$hidden)),
-                ', FA=\\texttt{', mod.cANN$model$actfun,'}'))
-
-# MV
-desc.cmv <- cbind(
-  'cMV',
-  paste0(paste(paste0('$\\omega_{',names(mod.cMV$weigths),'}$'), '=',
-                                 round(as.numeric(mod.cMV$weigths), 3)),
-                           collapse = ', '))
-
-# CP
-desc.ccp <- cbind(
-  'cCP',
-  paste0(
-  paste0(
-    class(mod.cCP$model$MVDC@copula)[1],'(',
-    paste0('$\\rho_{',1:length(mod.cCP$model$MVDC@copula@parameters),'}$=',
-           round(mod.cCP$model$MVDC@copula@parameters,3), collapse = ', '),')'),
-  '\n',
-  paste0(
-    '$E_{',mod.cCP$model$combinedModelsNames, '}\\sim$\\textit{',
-    paste0(mod.cCP$model$MVDC@margins,"}",
-           sapply(mod.cCP$model$MVDC@paramMargins, function(y) {
-             paste0('$(', paste0(paste(round(unlist(as.numeric(y)),3)),
-                                collapse = ', '),')$')})), collapse = ', ')))
-
-# Table all models
-desc.mod <- rbind(desc.arima, desc.ets, desc.mlp, desc.svr, desc.elm,
-                     desc.lstm, desc.cmlp, desc.csvr, desc.cmv, desc.ccp)
-colnames(desc.mod) <- c("Formalismo","Descrição")
-
-# Latex table
-caption.desc.mod <- paste0(
-  'Descrição dos modelos construídos para a série ', rename.gwl[well],'. ',
-  'p, P -- termos autorregressivos não sazonais e sazonais, respectivamente, ',
-  'nL -- número de camadas ocultas, nN -- número de nós nas camadas ocultas, ',
-  'FA -- função de ativação, ',
-  'nSV -- número de \\textit{Support Vectors}, ',
-  '$\\omega_{modelo}$ -- peso atribuído ao preditor, ',
-  '$\\rho_i$ -- parâmetro da Cópula, ',
-  '$E_{modelo}$ -- resíduo do preditor'
-)
-latex.desc.mod <- xtable(
-  desc.mod,
-  caption = caption.desc.mod,
-  label = c(paste0("tab:models-",rename.gwl[well])),
-  align = 'ccp{12cm}'
-)
-latex.desc.mod.file <- paste0(
-  path.results,
-  paste0('latex tables/table.models.',rename.gwl[well],'.txt')
-)
-print.xtable(
-  file = latex.desc.mod.file,
-  x = latex.desc.mod,
-  caption.placement = "top",
-  include.rownames = FALSE,
-  sanitize.colnames.function = function(x){paste('{\\textbf{',x,'}}', sep ='')},
-  caption.width = c("15cm"),
-  sanitize.text.function = function(x){x},
-  booktabs = TRUE
-)
-
 # Plot forecasts ----
 point <- c(1,2,3,4,5,6,
            8,0,20,6,3,4)
@@ -486,12 +289,11 @@ lin <- c(2,3,4,5,6,2,
          2,3,4,5,6,2)
 col <- c('#e41a1c','#377eb8','#4daf4a','#984ea3','#ff7f00','#a65628',
          '#1b9e77','#d95f02','#7570b3','#e7298a','#66a61e','#e6ab02')
-y.lab <- c('Nível (m)')#; Encoding(y.lab) <- 'UTF-8'
+y.lab <- c('Nível (m)')
 
-png(paste0(path.results, "images/fct.", rename.gwl[[well]],".png"),
-    height = 15, width = 15, units = 'cm', res = 300)
 par(cex.axis = 0.7, xpd = TRUE, mgp = c(0.05,0.2,0), tck = -0.02,
     mar = c(2,2,1,3)+0.1, mfrow = c(2,1))
+
 # Single
 ts.plot(
   cbind(res.MODELS.src[,c(2:7)]),
@@ -527,6 +329,7 @@ legend(
   xjust = 0,
   yjust = 0
 )
+
 # Combined
 ts.plot(
   cbind(res.MODELS.src[,c(8:13)]),
@@ -562,10 +365,3 @@ legend(
   xjust = 0,
   yjust = 0
 )
-dev.off()
-
-# Save LSTM model ----
-mod.LSTM$model %>% save_model_hdf5(
-  filepath = paste0(path.results, "models/LSTM.", rename.gwl[[well]],".hdf5"),
-  overwrite = TRUE)
-
