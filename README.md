@@ -1,4 +1,4 @@
-This repository contains the MSc Research Project source code. The *dissertacao* is a R project for forecasting groundwater level (GWL) time series with ensemble models.
+This repository contains the MSc Research Project source code. The *dissertacao* is a R project for forecasting groundwater level (GWL) time series with ensemble models. You can read the master's thesis [here](http://sites.ufca.edu.br/proder/wp-content/uploads/sites/19/2022/10/Dissertao_Mestrado_PRODER_-_Rubens_final.pdf).
 
 *Read this in other languages*: [Português brasileiro](README.br.md).
 
